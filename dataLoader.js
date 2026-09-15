@@ -19,6 +19,28 @@ const DISALLOWED_PRODUCTS = [
 ];
 
 /**
+ * Loads inventory from Odoo into dataStore.DB through the backend, which holds the Odoo API key.
+ * Rows keep the old "DB" workbook column names. On failure the cached copy stays in place.
+ */
+async function loadOdooInventory(ds) {
+  try {
+    const response = await fetch(`${BW_BACKEND_BASE_URL}/odoo/inventory?code=${BW_BACKEND_CODE}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+    }
+    const { items, fetched_at, odoo_url } = await response.json();
+    const webUrl = `${odoo_url}/odoo/action-stock.product_template_action_product`;
+    const stored = { dataframe: items, metadata: { source: "odoo", lastModifiedDateTime: fetched_at, webUrl } };
+    ds["DB"] = stored;
+    ds.fileLinks["DB"] = webUrl;
+    await idbUtil.setDataset("DBData", stored);
+    console.log(`[Inventory] ${items.length} products loaded from Odoo.`);
+  } catch (err) {
+    console.error("[Inventory] Odoo inventory load failed; keeping cached data.", err);
+  }
+}
+
+/**
  * Loads the configuration JSON file from the same directory.
  */
 async function loadConfig() {
@@ -73,6 +95,7 @@ async function processFiles() {
     let pricingChanged = false;
     const bufferCache = new Map();
     const ds = window.dataStore;
+    const inventoryLoad = loadOdooInventory(ds); // runs alongside the workbook downloads
 
     for (const rows of byWorkbook.values()) {
       const firstRow = rows[0];
@@ -268,6 +291,7 @@ async function processFiles() {
       console.log("[Pricing] cache valid – no parsing needed.");
     }
 
+    await inventoryLoad;
     ds["OrgContacts"] = await window.contactUtils.fetchAndProcessOrgContacts(token);
 
     document.dispatchEvent(new Event("reports-ready"));
@@ -336,7 +360,7 @@ async function getMatchingProducts(query) {
   const results = fuse.search(query);
   return results.map(result => {
     const item = result.item;
-    const qtyAvailable = parseFloat(item["QtyOnHand"]) - parseFloat(item["QtyCommitted"]);
+    const qtyAvailable = parseFloat(item["QtyOnHand"]) - parseFloat(item["QtyCommited"]);
     return {
       PartNumber: item["PartNumber"],
       Description: item["Description"],

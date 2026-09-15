@@ -2,7 +2,7 @@
 // app.js
 // ---------------------------------------------
 
-const APP_VERSION = "1.2.4"; // Bumped version for Dynamic Data Loading
+const APP_VERSION = "1.2.5"; // Inventory now loads from Odoo (clears the cached workbook copy)
 
 // 1. Extract File Link logic so it can be called dynamically
 window.exposeFileLinks = () => {
