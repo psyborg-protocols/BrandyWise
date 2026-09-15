@@ -288,7 +288,11 @@
                                     <th style="width: 8%;">Qty</th>
                                     <th style="width: 8%;">FB Qty</th>
                                     <th style="width: 10%;">Unit Cost</th>
-                                    <th style="width: 12%;">Margin</th> <th style="width: 15%;">Price</th>  <th style="width: 15%;">Order Total</th>
+                                    <th id="calcMarginHeader" style="width: 12%;" onclick="quoteCalculator.toggleMarginMode()">
+                                      Margin
+                                      <span id="calcMarginModeBadge" class="badge ms-1" hidden><i class="fas fa-exchange-alt me-1"></i><span class="mode-label"></span></span>
+                                    </th>
+                                    <th style="width: 15%;">Price</th>  <th style="width: 15%;">Order Total</th>
                                     <th style="width: 15%;">Total Profit</th>
                                   </tr>
                                 </thead>

@@ -678,3 +678,15 @@ input, textarea, [contenteditable] {
     /* Perfect right-alignment: 100% width - pill width - right padding */
     left: calc(100% - 4.5ch - 0.25rem) !important; 
 }
+/* Quote calculator: clickable Margin header (manual <-> auto margin toggle) */
+#calcMarginHeader.margin-toggleable {
+    cursor: pointer;
+    user-select: none;
+}
+#calcMarginHeader.margin-toggleable:hover {
+    color: var(--bs-primary);
+}
+#calcMarginHeader .badge {
+    font-size: 0.65rem;
+    vertical-align: middle;
+}

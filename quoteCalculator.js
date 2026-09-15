@@ -5,7 +5,8 @@
 
 const quoteCalculator = {
   manualTierOverride: false, // Tracks if the user manually clicked the tier toggle
-  
+  useManualMargin: true, // When false, rows with a typed margin fall back to the auto (category/qty) margin
+
   // Default Settings Matrix
   settings: {
     Nordson: {
@@ -162,6 +163,26 @@ const quoteCalculator = {
 
     let tooltipHtml = "";
 
+    // --- MANUAL MARGIN MEMORY ---
+    // Remember what the user typed so the header toggle can switch back to it later
+    let marginSource = overrideSource;
+    if (overrideSource === 'margin') {
+      if (/[0-9]/.test(marginStr)) {
+        rowElement.dataset.manualMargin = margin;
+        this.useManualMargin = true;
+      } else {
+        delete rowElement.dataset.manualMargin;
+      }
+      this.updateMarginHeader();
+    } else if (overrideSource === 'price' && rowElement.dataset.manualMargin !== undefined) {
+      // A typed price replaces any typed margin on this row
+      delete rowElement.dataset.manualMargin;
+      this.updateMarginHeader();
+    } else if (!overrideSource && this.useManualMargin && rowElement.dataset.manualMargin !== undefined) {
+      marginSource = 'margin';
+      margin = parseFloat(rowElement.dataset.manualMargin);
+    }
+
     // --- TIER DETECTION & SYNC ---
     let activeTier = 'Less';
     
@@ -184,7 +205,7 @@ const quoteCalculator = {
     }
 
     // --- LOGIC GATE ---
-    if (overrideSource === 'margin') {
+    if (marginSource === 'margin') {
       // User typed a specific margin, calculate price
       if (margin < 100) {
         price = unitCost / (1 - (margin / 100));
@@ -199,9 +220,12 @@ const quoteCalculator = {
           <div class="border-top border-secondary pt-1 mt-1 text-muted" style="font-size: 0.75rem;">
             <em>Formula: Cost / (1 - Margin)</em>
           </div>
+          <div class="text-muted" style="font-size: 0.75rem;">
+            <em>Click the Margin header for auto margin</em>
+          </div>
         </div>`;
-        
-    } else if (overrideSource === 'price') {
+
+    } else if (marginSource === 'price') {
       // User typed a specific price, calculate margin
       margin = (price > 0) ? ((price - unitCost) / price) * 100 : 0;
       tooltipHtml = `
@@ -259,6 +283,10 @@ const quoteCalculator = {
           <div class="border-top border-secondary pt-1 mt-2 d-flex justify-content-between fw-bold text-info">
             <span>Effective Margin:</span> <span>${margin.toFixed(1)}%</span>
           </div>
+          ${rowElement.dataset.manualMargin !== undefined ? `
+          <div class="text-muted" style="font-size: 0.75rem;">
+            <em>Click the Margin header for your manual margin</em>
+          </div>` : ''}
         </div>`;
     }
 
@@ -314,6 +342,43 @@ const quoteCalculator = {
     });
   },
 
+  getManualMarginRows: function() {
+    const tableBody = document.getElementById('quoteCalculatorBody');
+    return Array.from(tableBody.rows).filter(row => row.dataset.manualMargin !== undefined);
+  },
+
+  // Header click: flip between typed margins and the category/qty auto margin
+  toggleMarginMode: function() {
+    const rows = this.getManualMarginRows();
+    if (rows.length === 0) return;
+
+    this.useManualMargin = !this.useManualMargin;
+    rows.forEach(row => this.onInputUpdate(row, null, true));
+    this.updateMarginHeader();
+  },
+
+  updateMarginHeader: function() {
+    const header = document.getElementById('calcMarginHeader');
+    const badge = document.getElementById('calcMarginModeBadge');
+    if (!header || !badge) return;
+
+    const hasManual = this.getManualMarginRows().length > 0;
+    header.classList.toggle('margin-toggleable', hasManual);
+    badge.hidden = !hasManual;
+
+    if (!hasManual) {
+      header.removeAttribute('title');
+      return;
+    }
+
+    badge.classList.toggle('bg-primary', this.useManualMargin);
+    badge.classList.toggle('bg-secondary', !this.useManualMargin);
+    badge.querySelector('.mode-label').textContent = this.useManualMargin ? 'Manual' : 'Auto';
+    header.title = this.useManualMargin
+      ? 'Showing your manual margin. Click to use the auto margin (category/qty).'
+      : 'Showing the auto margin (category/qty). Click to use your manual margin.';
+  },
+
   checkHighValueWarning: function(total) {
     if (total > 3000 && !this.toastShown) {
       const toastEl = document.getElementById('highValueToast');
@@ -334,6 +399,10 @@ const quoteCalculator = {
     this.manualTierOverride = false; // Reset manual override for new products
 
     const tableBody = document.getElementById('quoteCalculatorBody');
+    Array.from(tableBody.rows).forEach(row => delete row.dataset.manualMargin);
+    this.useManualMargin = true;
+    this.updateMarginHeader();
+
     const firstRow = tableBody.rows[0];
     const secondRow = tableBody.rows[1];
 
