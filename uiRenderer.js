@@ -25,10 +25,12 @@ function toNumber(val) {
 
 function getCountryName(code) {
   const map = {
+    US: "United States",
     CN: "China",
     ES: "Spain",
     GB: "England",
-    CH: "Switzerland"
+    CH: "Switzerland",
+    TR: "Turkey"
   };
   return map[code] || code;  // fallback to code if not found
 }
@@ -1015,7 +1017,7 @@ function showProductInfoModal(encodedPartNumber) {
   // --- 2. Populate Inventory & Metrics Column ---
   const inventoryListEl = document.getElementById('productInfoModalInventoryList');
   const fieldsToShow = [
-    "Active", "QtyOnHand", "QtyCommited", "ReOrder Level",
+    "Active", "CountryOfOrigin", "QtyOnHand", "QtyCommited", "ReOrder Level",
     "QtyOnOrder", "FullBoxQty", "UnitCost", "ExtValue", "ChangedCost"
   ];
   let inventoryHtml = '';
@@ -1023,7 +1025,7 @@ function showProductInfoModal(encodedPartNumber) {
   const reOrderLevel = toNumber(product["ReOrder Level"]);
 
   fieldsToShow.forEach(field => {
-    let displayName = field.replace(/([A-Z])/g, ' $1').trim();
+    let displayName = field === "CountryOfOrigin" ? "Country of Origin" : field.replace(/([A-Z])/g, ' $1').trim();
     const value = product[field];
     let displayValue;
 
@@ -1031,6 +1033,9 @@ function showProductInfoModal(encodedPartNumber) {
       displayValue = '<i class="text-muted">N/A</i>';
     } else {
       switch (field) {
+        case 'CountryOfOrigin':
+          displayValue = getCountryName(String(value).trim());
+          break;
         case 'UnitCost':
         case 'ExtValue':
           displayValue = (typeof value === 'number') ? moneyFmt.format(value) : value;
